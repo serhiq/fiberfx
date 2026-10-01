@@ -12,17 +12,24 @@ import (
 )
 
 func New(config Config, option Options, logger *zap.Logger) *fiber.App {
-	app := fiber.New(fiber.Config{
+	fields := []string{"requestId", "latency", "status", "method", "url", "ip", "ua", "body", "error"}
+	if len(option.requestLogFields) > 0 {
+		fields = option.requestLogFields
+	}
+
+	fiberConfig := fiber.Config{
 		DisableStartupMessage:   true,
 		EnableIPValidation:      true,
 		EnableTrustedProxyCheck: len(config.Proxies) > 0,
-		ErrorHandler:            option.errorHandler,
-		GETOnly:                 option.getOnly,
 		ProxyHeader:             config.ProxyHeader,
 		TrustedProxies:          config.Proxies,
 		UnescapePath:            true,
-		Views:                   option.views,
-	})
+	}
+	if option.configureFiber != nil {
+		option.configureFiber(&fiberConfig)
+	}
+
+	app := fiber.New(fiberConfig)
 	app.Use(requestid.New())
 	app.Use(fiberzap.New(fiberzap.Config{
 		Next: func(c *fiber.Ctx) bool {
@@ -39,7 +46,7 @@ func New(config Config, option Options, logger *zap.Logger) *fiber.App {
 			return c.Response().StatusCode() < fiber.StatusBadRequest
 		},
 		Logger: logger,
-		Fields: []string{"requestId", "latency", "status", "method", "url", "ip", "ua", "body", "error"},
+		Fields: fields,
 	}))
 	app.Use(recover.New())
 

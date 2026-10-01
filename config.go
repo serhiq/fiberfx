@@ -1,6 +1,10 @@
 package fiberfx
 
-import "github.com/gofiber/fiber/v2"
+import (
+	"slices"
+
+	"github.com/gofiber/fiber/v2"
+)
 
 type Config struct {
 	Address     string
@@ -9,29 +13,24 @@ type Config struct {
 }
 
 type Options struct {
-	getOnly      bool
-	views        fiber.Views
-	errorHandler fiber.ErrorHandler
-
-	withMetrics bool
-}
-
-func (o *Options) WithGetOnly() *Options {
-	o.getOnly = true
-	return o
-}
-
-func (o *Options) WithViews(views fiber.Views) *Options {
-	o.views = views
-	return o
-}
-
-func (o *Options) WithErrorHandler(handler fiber.ErrorHandler) *Options {
-	o.errorHandler = handler
-	return o
+	configureFiber   func(*fiber.Config)
+	requestLogFields []string
+	withMetrics      bool
 }
 
 func (o *Options) WithMetrics() *Options {
 	o.withMetrics = true
+	return o
+}
+
+// WithFiberConfig applies changes after the default Fiber config is assembled.
+func (o *Options) WithFiberConfig(configure func(*fiber.Config)) *Options {
+	o.configureFiber = configure
+	return o
+}
+
+// WithRequestLogFields replaces the HTTP logger fields; an empty list uses the defaults.
+func (o *Options) WithRequestLogFields(fields ...string) *Options {
+	o.requestLogFields = slices.Clone(fields)
 	return o
 }
